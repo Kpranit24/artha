@@ -1,0 +1,81 @@
+# =============================================================
+# backend/requirements.txt
+# PURPOSE:  All Python dependencies for the FastAPI backend
+#
+# NOTES:
+#   - Versions are pinned for reproducibility
+#   - Update versions carefully — test after each update
+#   - Run: pip install -r requirements.txt
+#   - Check for security updates: pip-audit
+#
+# SECTIONS:
+#   1. Core web framework
+#   2. Database
+#   3. Cache
+#   4. Data fetching
+#   5. AI / agents
+#   6. Auth
+#   7. Utilities
+#   8. Monitoring
+# =============================================================
+
+
+# ── 1. CORE WEB FRAMEWORK ─────────────────────────────────
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.0          # Data validation — v2 is much faster than v1
+pydantic-settings==2.5.2 # Settings from .env file
+python-multipart==0.0.9  # File uploads (for CSV export)
+httpx==0.27.2            # Async HTTP client (replaces requests)
+
+
+# ── 2. DATABASE ───────────────────────────────────────────
+sqlalchemy==2.0.35       # ORM — async support in v2
+asyncpg==0.29.0          # Async Postgres driver (fastest)
+alembic==1.13.3          # Database migrations
+supabase==2.7.2          # Supabase Python client (auth + db)
+
+
+# ── 3. CACHE ──────────────────────────────────────────────
+redis==5.1.1             # Redis client
+# NOTE: For Upstash Redis, same redis library works
+# Just set REDIS_URL to Upstash connection string in .env
+
+
+# ── 4. DATA FETCHING ──────────────────────────────────────
+# Free data sources (what we use by default)
+yfinance==0.2.44         # Yahoo Finance + NSE/BSE data (free)
+pandas==2.2.3            # Data manipulation
+numpy==2.1.2             # Numerical operations
+
+# UPGRADE PATH (paid sources):
+# polygon-api-client==1.13.6  # Uncomment when POLYGON_API_KEY is set
+# twelve-data==1.2.16          # Uncomment when TWELVE_DATA_KEY is set
+
+
+# ── 5. AI / AGENTS ────────────────────────────────────────
+openai==1.51.0           # Used for Groq (OpenAI-compatible API) — FREE tier
+anthropic==0.37.1        # Claude fallback — optional, add key later
+langgraph==0.2.35        # Agent orchestration
+langchain==0.3.4
+langchain-anthropic==0.2.4
+
+
+# ── 6. AUTH ───────────────────────────────────────────────
+python-jose[cryptography]==3.3.0  # JWT tokens
+passlib[bcrypt]==1.7.4             # Password hashing
+python-dotenv==1.0.1               # Load .env file
+bcrypt==4.2.0                      # Password hashing (local dev auth fallback)
+
+
+# ── 7. UTILITIES ──────────────────────────────────────────
+aiohttp==3.10.9          # Async HTTP (used in data agents)
+pytz==2024.2             # Timezone handling (IST for India)
+python-dateutil==2.9.0   # Date parsing
+orjson==3.10.7           # Fast JSON (3x faster than stdlib json)
+tenacity==9.0.0          # Retry logic for API calls
+
+
+# ── 8. MONITORING ─────────────────────────────────────────
+sentry-sdk[fastapi]==2.16.0  # Error tracking (free tier: 5K errors/mo)
+python-telegram-bot==21.6    # Telegram alerts

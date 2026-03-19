@@ -1,0 +1,68 @@
+/* =============================================================
+   frontend/app/globals.css
+   PURPOSE:  Global styles, Tailwind base, CSS variables for theming
+   LAST UPDATED: March 2026
+   ============================================================= */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background:       0 0% 100%;
+    --foreground:       240 10% 3.9%;
+    --card:             0 0% 100%;
+    --card-foreground:  240 10% 3.9%;
+    --muted:            240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --border:           240 5.9% 90%;
+    --ring:             240 5.9% 10%;
+    --radius:           0.5rem;
+  }
+
+  .dark {
+    --background:       240 10% 3.9%;
+    --foreground:       0 0% 98%;
+    --card:             240 10% 3.9%;
+    --card-foreground:  0 0% 98%;
+    --muted:            240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --border:           240 3.7% 15.9%;
+    --ring:             240 4.9% 83.9%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Smooth scrolling */
+  html { scroll-behavior: smooth; }
+
+  /* Tabular numbers for all financial data */
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+}
+
+/* Ticker tape animation */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: ticker 40s linear infinite;
+}
+
+/* Plotly chart: remove default toolbar background */
+.js-plotly-plot .plotly .modebar {
+  display: none !important;
+}
+
+/* Remove default focus rings from buttons (we add our own) */
+button:focus-visible {
+  @apply outline-none ring-2 ring-ring ring-offset-2;
+}

@@ -1,0 +1,183 @@
+# =============================================================
+# docker-compose.yml
+# PURPOSE:  Runs the entire Artha stack locally
+#           and mirrors production setup exactly
+#
+# USAGE:
+#   Start all:   docker-compose up
+#   Start one:   docker-compose up backend
+#   Rebuild:     docker-compose up --build
+#   Stop all:    docker-compose down
+#   With logs:   docker-compose up --attach backend
+#
+# PORTABLE TO:
+#   Railway, Render, DigitalOcean, AWS ECS, Azure Container Apps
+#   Only .env changes between providers — zero code changes
+#
+# SERVICES:
+#   frontend  → Next.js on port 3000
+#   backend   → FastAPI on port 8000
+#   redis     → Cache on port 6379
+#   postgres  → Database on port 5432
+#
+# IN PRODUCTION:
+#   Replace local redis + postgres with managed services:
+#   redis    → Upstash Redis (free tier)
+#   postgres → Supabase (free tier)
+#   This reduces Railway bill and improves reliability
+#
+# LAST UPDATED: March 2026
+# =============================================================
+
+version: '3.9'
+
+services:
+
+  # ── FRONTEND ─────────────────────────────────────────────
+  # Next.js 15 — serves the dashboard UI
+  # In production: deployed separately to Vercel (free)
+  # Local: runs on http://localhost:3000
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${API_URL:-http://localhost:8000}
+      - NEXT_PUBLIC_APP_URL=${APP_URL:-http://localhost:3000}
+    volumes:
+      # Hot reload in development
+      # REMOVE this in production for security
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    # UPGRADE: Add --cpus and --memory limits when on paid plan
+
+
+  # ── BACKEND ──────────────────────────────────────────────
+  # FastAPI — handles all data, agents, AI, auth
+  # In production: deployed to Railway ($5/mo)
+  # Local: runs on http://localhost:8000
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@postgres:5432/artha}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - COINGECKO_API_KEY=${COINGECKO_API_KEY}
+      - ALPHA_VANTAGE_KEY=${ALPHA_VANTAGE_KEY}
+      - POLYGON_API_KEY=${POLYGON_API_KEY}
+      - USE_POLYGON=${USE_POLYGON:-false}
+      - TWELVE_DATA_KEY=${TWELVE_DATA_KEY}
+      - USE_TWELVE_DATA=${USE_TWELVE_DATA:-false}
+      - NEWSAPI_KEY=${NEWSAPI_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - ENABLE_AI_INSIGHTS=${ENABLE_AI_INSIGHTS:-true}
+      - DEMO_MODE=${DEMO_MODE:-false}
+      # Cache TTLs
+      - CACHE_TTL_PRICES=${CACHE_TTL_PRICES:-15}
+      - CACHE_TTL_METRICS=${CACHE_TTL_METRICS:-300}
+      - CACHE_TTL_FUNDAMENTALS=${CACHE_TTL_FUNDAMENTALS:-3600}
+      - CACHE_TTL_HISTORICAL=${CACHE_TTL_HISTORICAL:-86400}
+      - CACHE_TTL_INSIGHTS=${CACHE_TTL_INSIGHTS:-3600}
+    volumes:
+      # Hot reload in development
+      # REMOVE this in production
+      - ./backend:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Cloud providers use this to know backend is ready
+      # Also used by monitoring agents
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+
+  # ── REDIS ─────────────────────────────────────────────────
+  # Cache — stores live prices, computed metrics, AI insights
+  # In production: replace with Upstash Redis (free tier)
+  #   Set REDIS_URL=rediss://default:pass@host.upstash.io:6379
+  #   Then remove this service from docker-compose
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    # LRU eviction: when Redis hits 256MB, oldest keys are removed first
+    # This protects Railway 512MB memory limit
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    # NOTE: Redis data is not persisted between restarts in this config
+    # That's fine — all cached data can be re-fetched from APIs
+    # If you want persistence: add "volumes: - redis_data:/data"
+
+
+  # ── POSTGRES ──────────────────────────────────────────────
+  # Database — stores users, portfolios, watchlists, alerts
+  # In production: replace with Supabase (free tier)
+  #   Set DATABASE_URL=postgresql://postgres:pass@db.supabase.co:5432/postgres
+  #   Then remove this service from docker-compose
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=artha
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+    volumes:
+      # IMPORTANT: This persists your data between restarts
+      # When migrating cloud providers:
+      #   1. pg_dump artha > backup.sql
+      #   2. Copy backup.sql to new provider
+      #   3. pg_restore backup.sql
+      - postgres_data:/var/lib/postgresql/data
+      # Run migrations on first start
+      - ./backend/app/db/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d artha"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+
+volumes:
+  postgres_data:
+    # Named volume — survives container restarts
+    # To completely reset DB: docker-compose down -v
+    driver: local
+
+
+networks:
+  default:
+    name: artha-network
+    # All services communicate over this private network
+    # Backend calls redis:6379 and postgres:5432 internally
+    # Only frontend (3000) and backend (8000) are exposed to host
