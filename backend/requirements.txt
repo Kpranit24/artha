@@ -46,7 +46,7 @@ redis==5.1.1             # Redis client
 # Free data sources (what we use by default)
 yfinance==0.2.44         # Yahoo Finance + NSE/BSE data (free)
 pandas==2.2.3            # Data manipulation
-numpy==2.1.2             # Numerical operations
+numpy>=1.26.0,<2.0.0            # Numerical operations
 
 # UPGRADE PATH (paid sources):
 # polygon-api-client==1.13.6  # Uncomment when POLYGON_API_KEY is set
