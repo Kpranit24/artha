@@ -31,8 +31,7 @@ import { APIResponse, HeatmapData, TickerData, InsightData, PortfolioData } from
 
 // ── CONFIG ────────────────────────────────────────────────
 
-const BASE_URL = "https://artha-production-f55e.up.railway.app"; || "http://localhost:8000"
-
+const BASE_URL = "https://artha-production-f55e.up.railway.app";
 // How often to refetch live data (milliseconds)
 // 15s matches Perplexity Finance VIP refresh rate
 // Increase to 60s to reduce API calls during development
