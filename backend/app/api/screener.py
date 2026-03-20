@@ -37,7 +37,7 @@ from app.api.deps import get_current_user_optional, check_rate_limit
 router = APIRouter()
 
 
-@router.get("/screener")
+@router.get("/")
 async def get_screener(
     market: str = Query(
         default="all",

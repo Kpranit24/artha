@@ -30,7 +30,8 @@
 import { APIResponse, HeatmapData, TickerData, InsightData, PortfolioData } from "@/types/market"
 
 // ── CONFIG ────────────────────────────────────────────────
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
+const BASE_URL = "https://artha-production-f55e.up.railway.app"; || "http://localhost:8000"
 
 // How often to refetch live data (milliseconds)
 // 15s matches Perplexity Finance VIP refresh rate
@@ -110,8 +111,7 @@ async function getHeatmap(params: HeatmapParams = {}): Promise<HeatmapData> {
     timeframe: params.timeframe || "1d",
   })
 
-  const response = await fetchAPI<HeatmapData>(`/api/heatmap?${query}`)
-
+  const response = await fetchAPI<TickerData[]>(`/api/screener/screener?${query}`)
   if (!response.success || !response.data) {
     throw new APIError("Heatmap data unavailable")
   }
